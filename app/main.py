@@ -120,7 +120,7 @@ async def handle_connection(reader, writer):
 def main():
     loop = asyncio.get_event_loop()
     server = loop.run_until_complete(
-        asyncio.start_server(handle_connection, host="localhost", port=6379, reuse_address=True)
+        asyncio.start_server(handle_connection, host="127.0.0.1", port=6379, reuse_address=True)
     )
 
     try:
