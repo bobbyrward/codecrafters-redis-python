@@ -119,7 +119,9 @@ async def handle_connection(reader, writer):
 
 def main():
     loop = asyncio.get_event_loop()
-    server = loop.run_until_complete(asyncio.start_server(handle_connection, host="localhost", port=6379))
+    server = loop.run_until_complete(
+        asyncio.start_server(handle_connection, host="localhost", port=6379, reuse_address=True)
+    )
 
     try:
         loop.run_forever()
