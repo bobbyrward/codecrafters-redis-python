@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import asyncio
+import time
 
 
 @dataclass
@@ -11,19 +12,33 @@ class Command:
 class Cache:
     def __init__(self):
         self.store = {}
+        self.timeouts = {}
 
     def get(self, key):
         if key in self.store:
-            value = self.store[key]
-            prefix = b"$" + str(len(value)).encode("ascii") + b"\r\n"
-            encoded_value = value + b"\r\n"
+            timeout = self.timeouts.get(key)
 
-            return b"".join((prefix, encoded_value))
+            print(f"Key '{key}' has timeout '{timeout}'. Current time is {time.time()}")
+            if timeout and time.time() > timeout:
+                del self.store[key]
+                del self.timeouts[key]
+                return b"$-1\r\n"
+            else:
+                value = self.store[key]
+                prefix = b"$" + str(len(value)).encode("ascii") + b"\r\n"
+                encoded_value = value + b"\r\n"
+
+                return b"".join((prefix, encoded_value))
         else:
             return b"$-1\r\n"
 
     def set(self, key, value):
         self.store[key] = value
+
+    def set_timeout(self, key, value):
+        self.timeouts[key] = time.time() + (value / 1000.0)
+        print(f"Current time is {time.time()}")
+        print(f"Timeout is      {self.timeouts[key]}")
 
 
 CACHE = Cache()
@@ -120,10 +135,28 @@ async def handle_get(writer, args):
 
 
 async def handle_set(writer, args):
-    if len(args) != 2:
+    args_len = len(args)
+
+    if args_len < 2:
         raise Exception(f"SET has wrong arguments: {args}")
 
-    CACHE.set(args[0], args[1])
+    key = args[0]
+    value = args[1]
+
+    if args_len == 2:
+        timeout = None
+    elif args_len == 4:
+        if args[2] != b"PX":
+            raise Exception(f"SET has wrong arguments: {args}")
+
+        timeout = int(args[3])
+    else:
+        raise Exception(f"SET has wrong arguments: {args}")
+
+    CACHE.set(key, value)
+
+    if timeout:
+        CACHE.set_timeout(key, timeout)
 
     writer.write(b"+OK\r\n")
 
