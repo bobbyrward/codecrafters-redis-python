@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 import asyncio
 
 
@@ -7,6 +6,27 @@ import asyncio
 class Command:
     command: str
     args: list
+
+
+class Cache:
+    def __init__(self):
+        self.store = {}
+
+    def get(self, key):
+        if key in self.store:
+            value = self.store[key]
+            prefix = b"$" + str(len(value)).encode("ascii") + b"\r\n"
+            encoded_value = value + b"\r\n"
+
+            return b"".join((prefix, encoded_value))
+        else:
+            return b"$-1\r\n"
+
+    def set(self, key, value):
+        self.store[key] = value
+
+
+CACHE = Cache()
 
 
 async def read_bulk_string(reader):
@@ -92,9 +112,27 @@ async def handle_echo(writer, args):
     writer.write(b"".join((b"+", args[0], b"\r\n")))
 
 
+async def handle_get(writer, args):
+    if len(args) != 1:
+        raise Exception(f"GET has wrong arguments: {args}")
+
+    writer.write(CACHE.get(args[0]))
+
+
+async def handle_set(writer, args):
+    if len(args) != 2:
+        raise Exception(f"SET has wrong arguments: {args}")
+
+    CACHE.set(args[0], args[1])
+
+    writer.write(b"+OK\r\n")
+
+
 COMMAND_MAP = {
     b"PING": handle_ping,
     b"ECHO": handle_echo,
+    b"GET": handle_get,
+    b"SET": handle_set,
 }
 
 
