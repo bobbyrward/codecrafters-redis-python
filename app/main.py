@@ -109,7 +109,7 @@ async def handle_connection(reader, writer):
         print(f"COMMAND = '{command}'")
 
         try:
-            command_handler = COMMAND_MAP[command.command]
+            command_handler = COMMAND_MAP[command.command.upper()]
         except KeyError:
             print(f"Unknown command: {command.command}")
             break
