@@ -146,7 +146,7 @@ async def handle_set(writer, args):
     if args_len == 2:
         timeout = None
     elif args_len == 4:
-        if args[2] != b"PX":
+        if args[2].upper() != b"PX":
             raise Exception(f"SET has wrong arguments: {args}")
 
         timeout = int(args[3])
